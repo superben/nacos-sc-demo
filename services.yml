@@ -1,0 +1,24 @@
+version: "3.9"
+
+services:
+  service-provider:
+    image: demo/provider:v1.0
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_CLOUD_ENABLED: "true"
+      NACOS_SERVER_PORT: "nacos:8848"
+#    links:
+#      - "nacos:nacos"
+#    depends_on:
+#      - "nacos"
+
+  service-consumer:
+    image: demo/consumer:v1.0
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_CLOUD_ENABLED: "true"
+      NACOS_SERVER_PORT: "nacos:8848"
+#    links:
+#      - "nacos"

@@ -1,0 +1,15 @@
+
+server:
+  port: 8080
+
+logging:
+  level:
+    root: info
+#    com.alibaba.cloud.nacos: debug
+#    sun.net.www.protocol.http: debug
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"

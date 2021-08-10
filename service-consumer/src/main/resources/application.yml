@@ -1,0 +1,9 @@
+
+server:
+  port: 8081
+
+logging:
+  level:
+    root: info
+    com.alibaba.cloud.nacos: debug
+

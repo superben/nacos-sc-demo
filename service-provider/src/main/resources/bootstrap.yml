@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: service-provider
+  cloud:
+    nacos:
+      config:
+        server-addr: ${NACOS_SERVER_PORT:127.0.0.1:8848}
+        enabled: true
+      discovery:
+        server-addr: ${NACOS_SERVER_PORT:127.0.0.1:8848}
+        enabled: ${SPRING_CLOUD_ENABLED:false}
