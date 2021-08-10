@@ -6,7 +6,10 @@ Kubernetes模式下，使用Nacos作为注册中心及配置中心；Istio模式
 
 ## 编译环境 
 JDK: AdoptOpenJDK-11.0.11+9
+
 Base Image: openjdk:11-jre-slim
+
+Nacos Image: nacos/nacos-server:2.0.3-slim
 
 ## 构建项目
 分别进入service-provider及service-consumer子目录，执行如下命令：
@@ -14,7 +17,7 @@ Base Image: openjdk:11-jre-slim
 # 编译打包，上传镜像
 mvn clean package; docker build -t 10.200.10.1:5000/demo/provider:v1.0 .; docker push 10.200.10.1:5000/demo/provider:v1.0
 
-# # 编译打包，上传镜像
+# 编译打包，上传镜像
 mvn clean package; docker build -t 10.200.10.1:5000/demo/consumer:v1.0 .; docker push 10.200.10.1:5000/demo/consumer:v1.0
 ```
 
