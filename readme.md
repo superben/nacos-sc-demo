@@ -2,7 +2,7 @@
 # Nacos-SpringCloud-Mesh-demo
 本项目用于展示如何将 Nacos+SpringCloud 应用从Kubernetes运行切换到Istio。
 
-Kubernetes模式下，使用Nacos作为注册中心及配置中心；RestTemplate使用K8s service做负载均衡。FeignClient从Nacos注册中心读取服务实例信息做负载均衡。
+Kubernetes模式下，使用Nacos作为注册中心及配置中心；RestTemplate和FeignClient从Nacos注册中心读取服务实例信息做负载均衡。
 
 Istio模式下，Nacos只作为配置中心，Kubernetes作为注册中心，RestTemplate和FeignClient都使用sidecar做负载均衡。
 
