@@ -1,6 +1,5 @@
 package com.example.demo;
 
-import com.example.demo.proxy.ProviderDemoService;
 import com.example.demo.proxy.ProviderService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,9 +26,6 @@ public class ConsumerApplication {
 	private ProviderService providerService;
 
 	@Autowired
-	private ProviderDemoService providerDemoService;
-
-	@Autowired
 	public ConsumerApplication(RestTemplate restTemplate) {
 		this.restTemplate = restTemplate;
 	}
@@ -44,18 +40,9 @@ public class ConsumerApplication {
 		return restTemplate.getForObject("http://service-provider:8080/echo/" + param, String.class);
 	}
 
-	@RequestMapping(value = "/echo-feign-url/{str}", method = RequestMethod.GET)
-	public String feignUrlProvider(@PathVariable String str,
-								   @RequestParam(required = false) String tagName,
-								   @RequestParam(required = false) String tagValue) {
-		return providerService.echo(str);
-	}
-
 	@RequestMapping(value = "/echo-feign/{str}", method = RequestMethod.GET)
-	public String feignProvider(@PathVariable String str,
-								@RequestParam(required = false) String tagName,
-								@RequestParam(required = false) String tagValue) {
-		return providerDemoService.echo(str);
+	public String feignProvider(@PathVariable String str) {
+		return providerService.echo(str);
 	}
 
 }

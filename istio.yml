@@ -70,8 +70,8 @@ spec:
               value: "false"
             - name: NACOS_SERVER_PORT
               value: "nacos:8848"
-            - name: APP_SLEEP # 延迟启动应用10秒钟
-              value: "10"
+            - name: APP_SLEEP # 延迟启动应用30秒钟
+              value: "30"
       initContainers:
         - name: init
           image: 10.200.10.1:5000/yauritux/busybox-curl
@@ -116,8 +116,10 @@ spec:
               value: "false"
             - name: NACOS_SERVER_PORT
               value: "nacos:8848"
-            - name: APP_SLEEP    # 延迟启动应用10秒钟
-              value: "10"
+            - name: APP_SLEEP # 延迟启动应用30秒钟
+              value: "30"
+            - name: SPRING_PROFILES_ACTIVE  # 指定激活的profile为istio
+              value: "mesh"
       initContainers:
         - name: init
           image: 10.200.10.1:5000/yauritux/busybox-curl

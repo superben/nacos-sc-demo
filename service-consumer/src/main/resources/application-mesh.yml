@@ -1,0 +1,11 @@
+
+spring:
+  cloud:
+    nacos:
+      discovery:
+        enabled: false
+
+feign:
+  client:
+    url:
+      provider: http://service-provider:8080  # Mesh环境下，指定feign client的url属性，意味着sidecar将负责负载均衡

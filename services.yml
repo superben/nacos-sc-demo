@@ -8,10 +8,6 @@ services:
     environment:
       SPRING_CLOUD_ENABLED: "true"
       NACOS_SERVER_PORT: "nacos:8848"
-#    links:
-#      - "nacos:nacos"
-#    depends_on:
-#      - "nacos"
 
   service-consumer:
     image: demo/consumer:v1.0
@@ -20,5 +16,3 @@ services:
     environment:
       SPRING_CLOUD_ENABLED: "true"
       NACOS_SERVER_PORT: "nacos:8848"
-#    links:
-#      - "nacos"

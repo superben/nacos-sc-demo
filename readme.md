@@ -2,7 +2,9 @@
 # Nacos-SpringCloud-Mesh-demo
 本项目用于展示如何将 Nacos+SpringCloud 应用从Kubernetes运行切换到Istio。
 
-Kubernetes模式下，使用Nacos作为注册中心及配置中心；Istio模式下，Nacos只作为配置中心。
+Kubernetes模式下，使用Nacos作为注册中心及配置中心；RestTemplate使用K8s service做负载均衡。FeignClient从Nacos注册中心读取服务实例信息做负载均衡。
+
+Istio模式下，Nacos只作为配置中心，Kubernetes作为注册中心，RestTemplate和FeignClient都使用sidecar做负载均衡。
 
 ## 编译环境 
 JDK: AdoptOpenJDK-11.0.11+9
@@ -22,9 +24,14 @@ mvn clean package; docker build -t 10.200.10.1:5000/demo/consumer:v1.0 .; docker
 ```
 
 ## 实现细节
+两种实现方式:
+- service-consumer: SPRING_PROFILES_ACTIVE环境变量切换应用profile
+- service-provider: SPRING_CLOUD_ENABLED环境变量切换spring.cloud.nacos.discovery.enabled
+
+实际项目应用，请采用SPRING_PROFILES_ACTIVE环境变量切换应用profile方式。
 
 ### 使用SPRING_CLOUD_ENABLED环境变量切换Kubernetes模式和Istio模式
-- 详见service-consumer工程的bootstrap.yml
+- 详见service-provider工程的bootstrap.yml
 ```
 spring:
   cloud:
@@ -34,7 +41,31 @@ spring:
         enabled: ${SPRING_CLOUD_ENABLED:false}
 ```
 
-### 切换RestTemplate bean实例
+### 使用SPRING_PROFILES_ACTIVE环境变量切换应用profile
+#### 如何切换应用profile
+```
+# 启用Mesh模式
+export SPRING_PROFILES_ACTIVE=mesh
+
+# 启用Spring Cloud模式，即使用Nacos作为注册中心
+export SPRING_PROFILES_ACTIVE=
+```
+
+- 详见service-consumer工程的application-mesh.yml
+```
+spring:
+  cloud:
+    nacos:
+      discovery:
+        enabled: false
+
+feign:
+  client:
+    url:
+      provider: http://service-provider:8080  # Mesh环境下，指定feign client的url属性，意味着sidecar将负责负载均衡
+```
+
+#### 切换RestTemplate bean实例
 - 详见service-consumer工程的AppConfig.java
 ```
 @Configuration
@@ -42,35 +73,42 @@ public class AppConfig {
 
     @LoadBalanced
     @Bean
-    @ConditionalOnProperty(
-        value = {"spring.cloud.nacos.discovery.enabled"},
-        havingValue = "true"
-    )
+    @Profile("!mesh")
     public RestTemplate restTemplateForSpringCloud() {
         return new RestTemplate();
     }
 
-
     @Bean
-    @ConditionalOnProperty(
-        value = {"spring.cloud.nacos.discovery.enabled"},
-        havingValue = "false"
-    )
+    @Profile("mesh")
     public RestTemplate restTemplateForMesh() {
         return new RestTemplate();
     }
-
 }
 ```
 
-### FeignClient实例
+#### FeignClient实例
 - 详见service-consumer工程的
-  - ProviderDemoService.java
   - ProviderService.java
-  - ConsumerApplication.java
+```
+/**
+ * FeignClient for service-provider.
+ *
+ * Note: url的值是"${feign.client.url.provider:}"，而不是"${feign.client.url.provider}"，多了一个冒号，
+ * 意思是如果没有feign.client.url.provider属性值，就用空。
+ *
+ * 而当url是空的时候，FeignClient会尝试从注册中心获取服务实例，进行负载均衡。而当url非空时，就不会进行负载均衡，
+ * 我们利用此特性，让Mesh环境的sidecar做负载均衡。
+ */
+@FeignClient(name = "service-provider", url = "${feign.client.url.provider:}")
+public interface ProviderService {
+    @RequestMapping(value = "/echo/{str}", method = RequestMethod.GET)
+    String echo(@PathVariable("str") String str);
+}
+```
+
 
 注：
-- 不要使用FeignClient的name模式
+- Mesh模式下，不要使用FeignClient的name模式
 - 使用FeignClient的url模式的同时，注意URL要加上端口号，才能同时兼容Kubernetes和Istio。
 
 ## 运行项目
@@ -150,18 +188,48 @@ curl service-consumer:8081/echo-feign/2020
 
 ## 结果分析
 ### FeignClient本地缓存的影响
-- Spring Cloud模式下，FeignClient有本地缓存，所以看到service-consumer:8081/echo-feign-url的结果不进行负载均衡。
-- Istio模式下，FeignClient虽然有本地缓存，但是service-consumer:8081/echo-feign-url的结果是负载均衡的。说明sidecar负责的均衡的。
+- Spring Cloud模式下，FeignClient的url方式有本地缓存，所以看到service-consumer:8081/echo-feign-url的结果不进行负载均衡。
+- Istio模式下，FeignClient的url方式虽然有本地缓存，但是service-consumer:8081/echo-feign-url的结果是负载均衡的。说明sidecar负责的均衡的。
 ### FeignClient的name模式
-- Spring Cloud模式下，由于使用Nacos作为注册中心，consumer的FeignClient可以获得provider的实例，所以调用正常
+- Spring Cloud模式下，由于使用Nacos作为注册中心，consumer的FeignClient可以从Nacos注册中心获得provider的实例，所以调用正常
 - Istio模式下，由于使用Kubernetes作为注册中心，consumer的FeignClient获取不到provider的实例，所以调用失败。
+### 我们的FeignClient实现方式
+- Spring Cloud模式下，虽然使用FeignClient的url方式，但url值为空，FeignClient还会Nacos注册中心获得provider的实例，正常进行负载均衡
+- Istio模式下，为FeignClient的url方式指定url值，由sidecar进行负载均衡
 ### RestTemplate模式
 - Spring Cloud模式下，由于使用Nacos作为注册中心，使用@LoadBalanced注解，获取provider的实例，由RestTemplate负责负载均衡。
 - Istio模式下，使用Kubernetes作为注册中心，使用常规RestTemplate实例，使用Kubernetes Service名访问provider，由sidecar负责负载均衡。
 
 ## 附录
 ### 本地调试命令集
+
 ```
 docker build -t demo/provider:v1.0 .
 docker run --rm -p 8080:8080 --env NACOS_SERVER_PORT=192.168.1.131:8848 demo/provider:v1.0
+```
+
+### 本地docker-compose调试
+本项目调试初期使用docker-compose调试，需要Nacos和provider&consumer应用启动时间匹配，所以使用两个docker-cmopose文件启动。
+
+``` 
+docker-compose up
+docker-compose -f services.yml up
+```
+
+### 指定工程profile
+```
+see: https://stackoverflow.com/questions/40060989/how-to-use-spring-boot-profiles
+
+# 方式1
+export SPRING_PROFILES_ACTIVE=mesh
+mvn clean spring-boot:run 
+
+# 方式2
+mvn clean spring-boot:run -Dspring-boot.run.profiles=mesh
+
+# 方式3
+java -jar target/app.jar --spring.profiles.active=mesh
+
+# 方式4
+java -jar -Dspring.profiles.active=mesh target/app.jar
 ```
